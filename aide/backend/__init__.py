@@ -1,4 +1,10 @@
-from . import backend_anthropic, backend_openai, backend_openrouter, backend_gemini
+from . import (
+    backend_anthropic,
+    backend_cli,
+    backend_gemini,
+    backend_openai,
+    backend_openrouter,
+)
 from .utils import FunctionSpec, OutputType, PromptType, compile_prompt_to_md
 import re
 import logging
@@ -8,6 +14,11 @@ logger = logging.getLogger("aide")
 
 
 def determine_provider(model: str) -> str:
+    # AIDE_USE_CLI=1 routes everything through backend_cli regardless of model
+    # name — the subscription-friendly path (no API keys). The specific CLI
+    # (claude/codex/gemini) is selected by AIDE_CLI_AGENT (default 'claude').
+    if os.getenv("AIDE_USE_CLI"):
+        return "cli"
     # Check if model matches OpenAI patterns first
     if re.match(r"^(gpt-.*|o\d+(-.*)?|codex-mini-latest)$", model):
         return "openai"
@@ -28,6 +39,7 @@ provider_to_query_func = {
     "anthropic": backend_anthropic.query,
     "openrouter": backend_openrouter.query,
     "gemini": backend_gemini.query,
+    "cli": backend_cli.query,
 }
 
 
