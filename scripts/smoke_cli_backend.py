@@ -137,8 +137,27 @@ def test_function_calling(model: str) -> None:
     print("  PASS")
 
 
+def test_system_only(model: str) -> None:
+    """AIDE calls always pass system_message with user_message=None.
+    Regression test for: backend must promote system → user when user is None,
+    otherwise the CLI errors with 'Input must be provided ... when using --print'.
+    """
+    print("\n=== Test 3: system-only prompt (AIDE's actual call shape) ===")
+    out, req_time, in_tok, out_tok, info = backend_cli.query(
+        system_message="Reply with exactly: system-only-ok",
+        user_message=None,
+        func_spec=None,
+        model=model,
+    )
+    print(f"  output: {out!r}")
+    print(f"  time:   {req_time:.2f}s")
+    assert isinstance(out, str), f"expected str, got {type(out).__name__}"
+    assert "system-only-ok" in out.lower(), f"expected 'system-only-ok', got: {out!r}"
+    print("  PASS")
+
+
 def test_dispatcher(model: str) -> None:
-    print("\n=== Test 3: top-level dispatch via AIDE_USE_CLI ===")
+    print("\n=== Test 4: top-level dispatch via AIDE_USE_CLI ===")
     # AIDE_USE_CLI is already set if the user invoked with it; we rely on it here.
     if not os.environ.get("AIDE_USE_CLI"):
         print("  AIDE_USE_CLI not set in this process — setting it temporarily")
@@ -180,6 +199,7 @@ def main() -> int:
     try:
         test_plain_text(model)
         test_function_calling(model)
+        test_system_only(model)
         test_dispatcher(model)
     except AssertionError as e:
         print(f"\nFAIL: {e}")

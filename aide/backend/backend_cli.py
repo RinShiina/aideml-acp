@@ -448,6 +448,13 @@ def query(
             f"Available adapters: {sorted(ADAPTERS.keys())}"
         )
 
+    # AIDE's agent calls (see agent.py:157, 314) pass the prompt as
+    # `system_message` with `user_message=None`. CLI tools require an actual
+    # prompt argument or stdin content — promote the system text to user when
+    # user is empty. Mirrors backend_anthropic.query's swap at backend_anthropic.py:63-64.
+    if user_message is None and system_message is not None:
+        user_message, system_message = system_message, None
+
     adapter = ADAPTERS[agent_name]
 
     if shutil.which(adapter.bin_name) is None:
