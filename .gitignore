@@ -168,3 +168,9 @@ logs
 
 .gradio/
 .ruff_cache/
+
+# CLI backend (aideml-acp fork): local config and per-user state
+.claude/
+*.local.yaml
+.env.local
+aide_local.env
