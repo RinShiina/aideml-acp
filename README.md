@@ -16,6 +16,21 @@ LLM‑driven agent that writes, evaluates & improves machine‑learning code.
 <a href="https://docs.weco.ai/cli/getting-started?utm_source=aidemlrepo" target="_blank"><strong>Use in Production? Try Weco →</strong></a>
 </p>
 
+---
+
+> **🛠 Fork notice — `aideml-acp`**
+>
+> This is a community fork of [WecoAI/aideml](https://github.com/WecoAI/aideml) that
+> adds a **CLI backend**: AIDE can drive a locally-installed coding-agent CLI
+> (`claude`, `codex`, `gemini`) instead of API providers, so users with
+> Claude Pro/Max / ChatGPT Plus/Pro / Gemini Pro **subscriptions can run AIDE
+> without API keys**.
+>
+> See [**CLI Backend Mode**](#cli-backend-mode-no-api-key) below. All upstream
+> AIDE behavior is preserved unchanged when the new mode isn't activated.
+
+---
+
 # What Is AIDE ML?
 
 **AIDE ML is the open‑source “reference build” of the AIDE algorithm**, a tree‑search agent that autonomously drafts, debugs and benchmarks code until a user‑defined metric is maximised (or minimised). It ships as a *research‑friendly* Python package with batteries‑included utilities (CLI, visualisation, config presets) so that academics and engineer‑researchers can **replicate the paper, test new ideas, or prototyping ML pipelines**.
@@ -87,6 +102,108 @@ After the run finishes you’ll find:
 
 - `logs/<id>/best_solution.py` – best code found
 - `logs/<id>/tree_plot.html` – click to inspect the solution tree
+
+---
+
+## CLI Backend Mode (no API key)
+
+This fork adds a backend that drives a locally-installed coding-agent CLI
+(`claude`, `codex`, or `gemini`) via subprocess in non-interactive mode,
+so users on a **Claude Pro/Max**, **ChatGPT Plus/Pro**, or **Gemini Pro**
+subscription can run AIDE without exporting any API key.
+
+### Prerequisites
+
+Install **one** of the supported CLIs and complete its one-time login:
+
+| Adapter | CLI binary | Install (typical) | First-time auth | Status |
+|---------|-----------|-------------------|------------------|--------|
+| `claude` | `claude` | see [Claude Code docs](https://docs.claude.com/en/docs/claude-code/overview) | `claude /login` (browser) | **tested** with `claude` v2.1.x |
+| `codex`  | `codex`  | see [openai/codex](https://github.com/openai/codex) | `codex` (browser OAuth) | **untested** — flags may need adjustment |
+| `gemini` | `gemini` | see [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | `gemini` (browser OAuth) | **untested** — see `# TODO(gemini):` markers |
+
+The `codex` and `gemini` adapters are implemented from public docs but
+have not been exercised against the real CLIs yet. If you run them and
+something breaks, the adapter source is `aide/backend/backend_cli.py`
+— `# TODO(codex):` / `# TODO(gemini):` markers flag the uncertain spots.
+
+### Activation
+
+Two env vars control routing — no AIDE config-schema changes:
+
+```bash
+export AIDE_USE_CLI=1              # route backend.query -> backend_cli
+export AIDE_CLI_AGENT=claude       # adapter: claude (default) | codex | gemini
+```
+
+When `AIDE_USE_CLI` is unset, all upstream behavior is preserved.
+
+### Verify your setup (~1 cent on a Claude subscription)
+
+```bash
+python scripts/smoke_cli_backend.py
+# Exercises: plain text round-trip + function-calling via JSON schema +
+# top-level dispatch with AIDE_USE_CLI=1. Halts on first failure.
+```
+
+Override the model/agent to test a different one:
+
+```bash
+AIDE_CLI_AGENT=gemini AIDE_SMOKE_MODEL=gemini-2.5-flash \
+    python scripts/smoke_cli_backend.py
+```
+
+### Run AIDE end-to-end through the CLI backend
+
+Copy the example config (it lives next to the default one) and edit it:
+
+```bash
+cp aide/utils/config.cli.example.yaml config.local.yaml   # gitignored
+# edit config.local.yaml to point data_dir/goal/eval at your task
+```
+
+Then run:
+
+```bash
+AIDE_USE_CLI=1 python -m aide.run \
+    data_dir="aide/example_tasks/house_prices" \
+    goal="Predict the sales price for each house" \
+    eval="RMSE between log-prices" \
+    agent.steps=2 \
+    agent.code.model=sonnet \
+    agent.feedback.model=haiku \
+    agent.report.model=haiku
+```
+
+Model names pass through verbatim to the CLI's `--model` flag — for
+`claude` that means short aliases like `haiku`, `sonnet`, `opus` or full
+IDs like `claude-haiku-4-5`.
+
+### Troubleshooting
+
+- **`<cli>` CLI not found on PATH.** Install the CLI and ensure
+  `which <cli>` resolves; the adapter checks at call time.
+- **Auth errors / "Not logged in".** Run the CLI's login flow once
+  (e.g. `claude /login`). The fork **does not** use `--bare` on claude
+  precisely so OAuth/keychain auth keeps working for subscription users.
+- **Function-calling returns prose instead of JSON.** Schema-parse
+  failures auto-retry once with an explicit reminder appended; if it
+  still fails, the run logs the offending output. For `gemini` (no
+  native `--json-schema` flag) this can happen more often — improvements
+  welcome.
+- **Hangs on `codex`.** Known upstream issue
+  ([openai/codex#153](https://github.com/openai/codex/issues/153)) — the
+  adapter passes `stdin=DEVNULL` precisely to avoid this; if you still
+  see it, file an issue here.
+- **CLAUDE.md / hooks polluting the agent's context.** Each call runs
+  in a per-process `tempfile.mkdtemp()` working directory, so the
+  agent can't auto-discover your real workspace's config.
+
+### Privacy
+
+No personal info is hardcoded anywhere in the fork. Local config files
+matching `*.local.yaml`, `.env.local`, `aide_local.env`, and `.claude/`
+are gitignored — use them freely for your own settings.
 
 ---
 
