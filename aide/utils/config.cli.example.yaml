@@ -1,0 +1,91 @@
+# =============================================================================
+# Example AIDE config for the CLI backend (aideml-acp fork)
+# =============================================================================
+#
+# This routes AIDE through a locally-installed coding-agent CLI instead of API
+# providers, so subscription users (Claude Pro/Max, ChatGPT Plus/Pro, Gemini Pro)
+# can use their plan without API keys.
+#
+# Prerequisites:
+#   - The target CLI installed and authenticated.
+#     - claude:  `claude --version` works; `claude /login` once if not authed.
+#     - codex:   `codex --version` works; `codex` once to OAuth (UNTESTED in this fork).
+#     - gemini:  `gemini --version` works; `gemini` once to OAuth (UNTESTED in this fork).
+#   - This config copied to e.g. `config.local.yaml` (which is gitignored) so
+#     your changes never accidentally land in commits.
+#
+# Activation (env vars; not config fields, so AIDE's schema stays untouched):
+#
+#   export AIDE_USE_CLI=1                   # route backend.query → backend_cli
+#   export AIDE_CLI_AGENT=claude            # adapter: claude | codex | gemini
+#                                           # (defaults to 'claude' if unset)
+#
+# Then run AIDE normally:
+#
+#   AIDE_USE_CLI=1 python -m aide.run \
+#     data_dir=./aide/example_tasks/house_prices \
+#     agent.steps=2 \
+#     agent.code.model=haiku \
+#     agent.feedback.model=haiku \
+#     agent.report.model=haiku
+#
+# Notes on the `model` fields below:
+#   - With AIDE_USE_CLI=1, the model string is passed verbatim to the CLI's
+#     `--model` flag (or its equivalent). For claude that means short aliases
+#     like `haiku`, `sonnet`, `opus`, or full IDs like `claude-haiku-4-5`.
+#   - The string does NOT need to match AIDE's normal model-name regexes
+#     (e.g. `gpt-.*` / `claude-.*` / `gemini-.*`) because the dispatcher
+#     short-circuits to CLI when AIDE_USE_CLI is set.
+#
+# =============================================================================
+
+# path to the task data directory
+data_dir: null
+
+desc_file: null
+goal: null
+eval: null
+
+log_dir: logs
+workspace_dir: workspaces
+
+preprocess_data: True
+copy_data: True
+
+exp_name: null
+
+# settings for code execution (unchanged from default; tune as needed)
+exec:
+  timeout: 3600
+  agent_file_name: runfile.py
+  format_tb_ipython: False
+
+generate_report: True
+
+# Final report generation. Picks a cheap-but-capable model by default.
+report:
+  model: haiku   # claude alias; verbatim through to `claude --model haiku`
+  temp: 1.0
+
+# Agent hyperparameters
+agent:
+  steps: 20
+  k_fold_validation: 5
+  expose_prediction: False
+  data_preview: True
+
+  # Coding stage — the main work, larger model recommended.
+  code:
+    model: sonnet   # claude alias for the latest sonnet
+    temp: 0.5
+
+  # Feedback stage — uses function-calling (submit_review). Cheap model fine.
+  feedback:
+    model: haiku
+    temp: 0.5
+
+  # Tree-search hyperparams
+  search:
+    max_debug_depth: 3
+    debug_prob: 0.5
+    num_drafts: 5
