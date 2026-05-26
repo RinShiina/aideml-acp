@@ -172,7 +172,7 @@ AIDE_USE_CLI=1 python -m aide.run \
     agent.steps=2 \
     agent.code.model=sonnet \
     agent.feedback.model=haiku \
-    agent.report.model=haiku
+    report.model=haiku
 ```
 
 Model names pass through verbatim to the CLI's `--model` flag — for
