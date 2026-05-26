@@ -183,8 +183,13 @@ def _claude_parse_output(
     }
 
     if func_spec is not None:
-        # --json-schema asks claude to return JSON matching the schema.
-        # On occasion the model wraps it in ```json fences — strip those.
+        # When --json-schema is used, claude returns the parsed structured object
+        # in envelope["structured_output"], and envelope["result"] is empty. Prefer
+        # the structured field; fall back to parsing "result" text if it's missing
+        # (some claude versions / paths may differ).
+        structured = envelope.get("structured_output")
+        if isinstance(structured, dict):
+            return _coerce_metric_to_float(structured), in_tokens, out_tokens, info
         candidate = _strip_fences(text)
         try:
             parsed = json.loads(candidate)
