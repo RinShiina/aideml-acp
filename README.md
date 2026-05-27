@@ -120,12 +120,17 @@ Install **one** of the supported CLIs and complete its one-time login:
 |---------|-----------|-------------------|------------------|--------|
 | `claude` | `claude` | see [Claude Code docs](https://docs.claude.com/en/docs/claude-code/overview) | `claude /login` (browser) | **tested** with `claude` v2.1.x |
 | `codex`  | `codex`  | see [openai/codex](https://github.com/openai/codex) | `codex` (browser OAuth) | **untested** — flags may need adjustment |
-| `gemini` | `gemini` | see [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | `gemini` (browser OAuth) | **untested** — see `# TODO(gemini):` markers |
+| `gemini` | `gemini` | see [google-gemini/gemini-cli](https://github.com/google-gemini/gemini-cli) | `gemini` (browser OAuth + one-time account verification) | **tested** with `gemini-cli` v0.43.0 (Gemini Pro subscription) |
 
-The `codex` and `gemini` adapters are implemented from public docs but
-have not been exercised against the real CLIs yet. If you run them and
-something breaks, the adapter source is `aide/backend/backend_cli.py`
-— `# TODO(codex):` / `# TODO(gemini):` markers flag the uncertain spots.
+The `codex` adapter is implemented from public docs but has not been
+exercised against the real CLI yet. If you run it and something breaks,
+the adapter source is `aide/backend/backend_cli.py` — `# TODO(codex):`
+markers flag the uncertain spots.
+
+> **Gemini note**: on a fresh Google account, the first headless call
+> may return a 403 "Verify your account to continue" with a
+> `validationLink`. Open that link in a browser once to complete the
+> security check; subsequent calls work without interaction.
 
 ### Activation
 

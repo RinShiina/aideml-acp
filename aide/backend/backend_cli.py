@@ -312,7 +312,15 @@ def _gemini_build_args(
     func_spec: FunctionSpec | None,
     model_kwargs: dict,
 ) -> list[str]:
-    args = ["gemini", "--output-format", "json"]
+    args = [
+        "gemini",
+        "--output-format", "json",
+        # We run in tempfile.mkdtemp() cwd which is never "trusted"; --skip-trust
+        # is the documented escape hatch for headless/automated invocation
+        # (https://geminicli.com/docs/cli/trusted-folders/#headless-and-automated-environments).
+        # Tested against gemini-cli v0.43+.
+        "--skip-trust",
+    ]
     if model:
         args.extend(["-m", model])
 
@@ -416,7 +424,7 @@ ADAPTERS: dict[str, CLIAdapter] = {
         prompt_via_stdin=False,  # gemini uses -p flag for the prompt
         parse_output=_gemini_parse_output,
         supports_json_schema=False,  # gemini CLI has no custom-schema flag yet
-        tested="UNTESTED — based on `gemini -p` docs as of 2026-05",
+        tested="tested with gemini-cli v0.43.0 — Gemini Pro subscription",
     ),
 }
 
